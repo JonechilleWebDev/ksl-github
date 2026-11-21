@@ -1,0 +1,228 @@
+Mantap! 🎉 Berarti diagnosis kita tepat: **game tetap di NTFS, sedangkan Proton prefix dipindahkan ke ext4 melalui symlink.**
+
+Kalau nanti ada game lain di Steam Library yang sama dan mengalami masalah Proton karena `compatdata` di NTFS, kamu bisa pakai pola berikut.
+
+## 🔧 Cara membuat symlink Proton untuk game lain
+
+Misalnya game lain punya AppID:
+
+```text
+1234567
+```
+
+### 1. Tutup Steam
+
+```bash
+steam -shutdown
+```
+
+Pastikan Steam benar-benar berhenti:
+
+```bash
+pgrep -a steam
+```
+
+Kalau tidak ada output, lanjut.
+
+---
+
+### 2. Cari AppID game
+
+AppID bisa dilihat dari folder:
+
+```bash
+ls "/media/jonelinux/Data/SteamLibrary/steamapps/compatdata"
+```
+
+Misalnya muncul:
+
+```text
+1493710
+2420510
+4053520
+1234567
+```
+
+`1234567` adalah AppID game baru.
+
+Kamu juga bisa melihat AppID dari URL Steam game atau file `appmanifest_1234567.acf`.
+
+---
+
+### 3. Cek apakah `compatdata/AppID` sudah ada
+
+```bash
+ls -ld "/media/jonelinux/Data/SteamLibrary/steamapps/compatdata/1234567"
+```
+
+Ada dua kemungkinan.
+
+#### A. Folder belum ada
+
+Langsung buat folder prefix di ext4:
+
+```bash
+mkdir -p "$HOME/.steam/steam/compatdata/1234567"
+```
+
+Kemudian symlink:
+
+```bash
+ln -s "$HOME/.steam/steam/compatdata/1234567" \
+"/media/jonelinux/Data/SteamLibrary/steamapps/compatdata/1234567"
+```
+
+---
+
+#### B. Folder sudah ada
+
+Misalnya:
+
+```text
+/media/jonelinux/Data/SteamLibrary/steamapps/compatdata/1234567
+```
+
+**Jangan langsung hapus.**
+
+Backup dulu:
+
+```bash
+cp -a \
+"/media/jonelinux/Data/SteamLibrary/steamapps/compatdata/1234567" \
+"$HOME/compatdata-1234567-backup"
+```
+
+Lalu hapus folder yang ada di NTFS:
+
+```bash
+rm -rf "/media/jonelinux/Data/SteamLibrary/steamapps/compatdata/1234567"
+```
+
+Buat lokasi prefix di ext4:
+
+```bash
+mkdir -p "$HOME/.steam/steam/compatdata/1234567"
+```
+
+Kemudian buat symlink:
+
+```bash
+ln -s "$HOME/.steam/steam/compatdata/1234567" \
+"/media/jonelinux/Data/SteamLibrary/steamapps/compatdata/1234567"
+```
+
+---
+
+### 4. Pastikan symlink benar
+
+Ini langkah **wajib**:
+
+```bash
+ls -ld "/media/jonelinux/Data/SteamLibrary/steamapps/compatdata/1234567"
+```
+
+Yang benar:
+
+```text
+lrwxrwxrwx ... 1234567 -> /home/jonelinux/.steam/steam/compatdata/1234567
+```
+
+Perhatikan:
+
+```text
+l
+```
+
+di awal. Itu berarti **link/symlink**.
+
+Kalau:
+
+```text
+d
+```
+
+berarti masih **directory biasa** dan jangan lanjut dulu.
+
+---
+
+### 5. Jalankan Steam
+
+```bash
+steam
+```
+
+Kemudian jalankan game.
+
+Proton akan membuat prefix di:
+
+```text
+/home/jonelinux/.steam/steam/compatdata/1234567/
+```
+
+sementara Steam tetap menganggap lokasinya:
+
+```text
+/media/jonelinux/Data/SteamLibrary/steamapps/compatdata/1234567
+```
+
+Karena symlink menghubungkan keduanya.
+
+---
+
+## 🧠 Pola yang perlu kamu ingat
+
+Setiap game punya:
+
+```text
+AppID
+```
+
+Misalnya:
+
+```text
+Holo vs Robo
+4053520
+```
+
+Maka:
+
+```text
+NTFS:
+Data/SteamLibrary/steamapps/compatdata/4053520
+             ↓ symlink
+ext4:
+~/.steam/steam/compatdata/4053520
+```
+
+Game sebenarnya tetap:
+
+```text
+Data/SteamLibrary/steamapps/common/Nama Game
+```
+
+Jadi **yang dipindahkan ke ext4 hanya Proton prefix-nya**, bukan file game.
+
+### ⚠️ Satu hal penting
+
+Jangan membuat symlink untuk **semua game secara membabi buta**. Kalau game tertentu ternyata bisa berjalan normal di NTFS, biarkan saja.
+
+Gunakan metode ini terutama kalau muncul error Proton yang berkaitan dengan:
+
+```text
+dosdevices/c:
+```
+
+atau:
+
+```text
+OSError: [Errno 22] Invalid argument
+```
+
+seperti yang terjadi pada Holo vs Robo.
+
+Dan **backup `compatdata-4053520-backup` yang sekarang sudah berhasil kamu buat sebaiknya jangan dihapus dulu** sampai kamu yakin gamenya berjalan normal beberapa kali.
+
+===============================
+
+Jalanin Docker Engine
+docker run -it --rm -p 8000:8000 opensecurity/mobile-security-framework-mobsf:latest
